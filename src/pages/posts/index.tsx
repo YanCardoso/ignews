@@ -1,6 +1,19 @@
+import { GetStaticProps } from "next";
 import Head from "next/head";
+import { getPrismicClient } from "../../services/prismic";
 import styles from "./styles.module.scss";
-export default function Posts() {
+
+type Post = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  UpdatedAt: string;
+};
+interface PostsProps {
+  posts: Post[];
+}
+
+export default function Posts({ posts }: PostsProps) {
   return (
     <>
       <Head>
@@ -9,44 +22,42 @@ export default function Posts() {
 
       <main className={styles.container}>
         <div className={styles.posts}>
-          <a href="">
-            <time>32 de março 2014</time>
-            <strong>Lorem Ipsum</strong>
-            <p>
-              Lorem Ipsum is simply dummy text of the printing and typesetting
-              industry. Lorem Ipsum has been the industry's standard dummy text
-              ever since the 1500s, when an unknown printer took a galley of
-              type and scrambled it to make a type specimen book. It has
-              survived not only five centuries, but also the leap into
-              electronic typesetting, remaining essentially unchanged.
-            </p>
-          </a>
-          <a href="">
-            <time>32 de março 2014</time>
-            <strong>Lorem Ipsum</strong>
-            <p>
-              Lorem Ipsum is simply dummy text of the printing and typesetting
-              industry. Lorem Ipsum has been the industry's standard dummy text
-              ever since the 1500s, when an unknown printer took a galley of
-              type and scrambled it to make a type specimen book. It has
-              survived not only five centuries, but also the leap into
-              electronic typesetting, remaining essentially unchanged.
-            </p>
-          </a>
-          <a href="">
-            <time>32 de março 2014</time>
-            <strong>Lorem Ipsum</strong>
-            <p>
-              Lorem Ipsum is simply dummy text of the printing and typesetting
-              industry. Lorem Ipsum has been the industry's standard dummy text
-              ever since the 1500s, when an unknown printer took a galley of
-              type and scrambled it to make a type specimen book. It has
-              survived not only five centuries, but also the leap into
-              electronic typesetting, remaining essentially unchanged.
-            </p>
-          </a>
+          {posts.map((post) => (
+            <a key={post.slug} href="">
+              <time>{post.UpdatedAt}</time>
+              <strong>{post.title}</strong>
+              <p>{post.excerpt}</p>
+            </a>
+          ))}
         </div>
       </main>
     </>
   );
 }
+export const getStaticProps: GetStaticProps = async () => {
+  const prismic = getPrismicClient();
+
+  const document = await prismic.getByType("blog-post");
+
+  const posts = document.results.map((post) => {
+    return {
+      slug: post.uid,
+      title: post.data.title,
+      excerpt:
+        post.data.content.find((content) => content.type === "paragraph")
+          ?.text ?? "",
+      UpdatedAt: new Date(post.last_publication_date).toLocaleDateString(
+        "pt-BR",
+        {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }
+      ),
+    };
+  });
+
+  return {
+    props: { posts },
+  };
+};
